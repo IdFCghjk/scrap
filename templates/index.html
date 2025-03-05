@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Location Finder</title>
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-out { opacity: 0; transition: opacity 0.5s ease-out; }
+        #processingOverlay { 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 0.3s ease-in; 
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-50 to-cyan-50 min-h-screen">
+    <!-- Initial Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <dotlottie-player
+            src="https://lottie.host/afda7fa7-d5fe-4d5a-b384-3651b9bf36db/6hTaGeRdVg.lottie"
+            background="transparent"
+            speed="1"
+            style="width: 200px; height: 200px"
+            loop
+            autoplay>
+        </dotlottie-player>
+        <p class="text-gray-600 mt-4 animate-pulse">Initializing TikTok Analyzer...</p>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div id="processingOverlay" class="fixed inset-0 bg-white bg-opacity-90 z-40 flex flex-col items-center justify-center">
+        <dotlottie-player
+            id="processingLottie"
+            src="https://lottie.host/afda7fa7-d5fe-4d5a-b384-3651b9bf36db/6hTaGeRdVg.lottie"
+            background="transparent"
+            speed="1"
+            style="width: 200px; height: 200px"
+            loop>
+        </dotlottie-player>
+        <p class="text-gray-600 mt-4 animate-pulse">Analyzing TikTok Content...</p>
+    </div>
+
+    <main class="container mx-auto px-4 py-8 max-w-2xl">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-pink-600 to-cyan-600">
+                    📱 TikTok Location Finder
+                </span>
+            </h1>
+            <p class="text-gray-600">Discover locations from TikTok videos</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
+            <form id="analyzeForm" class="space-y-4">
+                <div>
+                    <input 
+                        type="url" 
+                        id="videoUrl"
+                        required
+                        placeholder="Paste TikTok URL here..."
+                        class="w-full p-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400 transition-all">
+                </div>
+                <button 
+                    type="submit"
+                    class="w-full bg-gradient-to-r from-pink-500 to-cyan-500 hover:from-pink-600 text-white p-4 rounded-xl font-semibold transition-all">
+                    Analyze TikTok
+                </button>
+            </form>
+        </div>
+
+        <div id="results" class="space-y-6"></div>
+    </main>
+
+    <script>
+        // Initial load animation
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.add('fade-out');
+            setTimeout(() => document.getElementById('loadingScreen').remove(), 500);
+        }, 4000);
+
+        const processingOverlay = document.getElementById('processingOverlay');
+        const processingLottie = document.getElementById('processingLottie');
+
+        document.getElementById('analyzeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const button = form.querySelector('button');
+            const resultsDiv = document.getElementById('results');
+            const url = document.getElementById('videoUrl').value.trim();
+
+            processingOverlay.style.opacity = '1';
+            processingOverlay.style.pointerEvents = 'auto';
+            processingLottie.play();
+            button.disabled = true;
+            resultsDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultsDiv.innerHTML = `
+                        <div class="bg-white rounded-2xl shadow-lg p-6">
+                            <h2 class="text-2xl font-bold mb-2">${data.video_info.title}</h2>
+                            <div class="flex items-center gap-2 text-gray-600 mb-4">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                <span>${data.video_info.author}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    if (data.locations.length > 0) {
+                        const locationsHTML = data.locations.map(loc => `
+                            <div class="bg-white rounded-2xl shadow-lg p-6">
+                                <div class="flex items-start gap-3">
+                                    <div class="bg-pink-100 p-2 rounded-lg">
+                                        <svg class="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-lg">${loc.name}</h3>
+                                        <p class="text-gray-600 text-sm">${loc.address}</p>
+                                        <p class="text-xs text-gray-400 mt-1">${loc.lat}, ${loc.lon}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        resultsDiv.innerHTML += `<div class="space-y-4 mt-6">${locationsHTML}</div>`;
+                    } else {
+                        resultsDiv.innerHTML += `
+                            <div class="bg-yellow-100 p-4 rounded-xl text-yellow-800 mt-6">
+                                No locations found in this TikTok
+                            </div>
+                        `;
+                    }
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="bg-red-100 p-4 rounded-xl text-red-800">
+                            ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="bg-red-100 p-4 rounded-xl text-red-800">
+                        ${error.message}
+                    </div>
+                `;
+            } finally {
+                processingOverlay.style.opacity = '0';
+                processingOverlay.style.pointerEvents = 'none';
+                processingLottie.stop();
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
