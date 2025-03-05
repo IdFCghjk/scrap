@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Video Location Finder</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 500px;
+            margin-top: 50px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card p-4">
+        <h3 class="text-center">📍 Tiktok Video Detail</h3>
+        <form id="videoForm">
+            <label for="video_url" class="form-label">Enter Video URL:</label>
+            <input type="text" class="form-control" id="video_url" required placeholder="Paste TikTok/YouTube URL">
+            <button type="submit" class="btn btn-primary w-100 mt-3">Find Detail</button>
+        </form>
+
+        <div class="loading">
+            <div class="spinner-border text-primary"></div>
+            <p>Analyzing video...</p>
+        </div>
+
+        <div id="result" class="mt-4"></div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("videoForm").addEventListener("submit", async function(event) {
+        event.preventDefault();
+        let video_url = document.getElementById("video_url").value;
+        document.querySelector(".loading").style.display = "block";
+        document.getElementById("result").innerHTML = "";
+
+        let response = await fetch("/process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ video_url })
+        });
+
+        let data = await response.json();
+        document.querySelector(".loading").style.display = "none";
+
+        if (data.success) {
+            document.getElementById("result").innerHTML = `
+                <h5>🎥 Video Info</h5>
+                <p><strong>Title:</strong> ${data.title}</p>
+                <p><strong>Uploader:</strong> ${data.uploader}</p>
+                <h5>📍 Found Locations</h5>
+                <ul class="list-group">
+                    ${data.locations.map(loc => `<li class="list-group-item">${loc.name} - ${loc.address}</li>`).join("")}
+                </ul>
+            `;
+        } else {
+            document.getElementById("result").innerHTML = `<p class="text-danger">❌ ${data.error}</p>`;
+        }
+    });
+</script>
+
+</body>
+</html>
